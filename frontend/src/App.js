@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
@@ -12,6 +13,7 @@ import Snippets from './pages/Snippets';
 import Wiki from './pages/Wiki';
 import AIAssistant from './pages/AIAssistant';
 import Activity from './pages/Activity';
+import Members from './pages/Members';
 import Layout from './components/Layout';
 
 const PrivateRoute = ({ children }) => {
@@ -44,12 +46,13 @@ function AppContent() {
       />
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={
             <PrivateRoute><Onboarding /></PrivateRoute>
           } />
-          <Route path="/" element={
+          <Route path="/app" element={
             <PrivateRoute><Layout /></PrivateRoute>
           }>
             <Route index element={<Dashboard />} />
@@ -58,6 +61,7 @@ function AppContent() {
             <Route path="wiki/:projectId" element={<Wiki />} />
             <Route path="ai/:projectId" element={<AIAssistant />} />
             <Route path="activity" element={<Activity />} />
+            <Route path="members" element={<Members />} />
           </Route>
         </Routes>
       </BrowserRouter>

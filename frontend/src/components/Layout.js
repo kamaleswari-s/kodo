@@ -3,7 +3,6 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getMyWorkspaces, getProjects } from '../utils/api';
-import toast from 'react-hot-toast';
 
 const KodoLogo = ({ size = 36, theme }) => (
   <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
@@ -63,15 +62,14 @@ export default function Layout() {
   };
 
   const isActive = (path) => location.pathname === path;
-  const isProjectActive = (projectId, section) => location.pathname === `/${section}/${projectId}`;
+  const isProjectActive = (projectId, section) => location.pathname === `/app/${section}/${projectId}`;
 
   const navItem = (label, path, icon) => (
     <div
       onClick={() => navigate(path)}
       style={{
         display: 'flex', alignItems: 'center', gap: '9px',
-        padding: '8px 12px',
-        marginBottom: '2px',
+        padding: '8px 12px', marginBottom: '2px',
         borderRadius: isActive(path) ? '0 8px 8px 0' : '8px',
         cursor: 'pointer',
         background: isActive(path) ? theme.navActive : 'transparent',
@@ -117,8 +115,9 @@ export default function Layout() {
 
         <div style={{ padding: '8px 6px', flex: 1 }}>
           <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.textMuted, padding: '8px 10px 4px' }}>Overview</div>
-          {navItem('Dashboard', '/', '📊')}
-          {navItem('Activity feed', '/activity', '⚡')}
+          {navItem('Dashboard', '/app', '📊')}
+          {navItem('Activity feed', '/app/activity', '⚡')}
+          {navItem('Members', '/app/members', '👥')}
 
           {projects.length > 0 && (
             <>
@@ -152,7 +151,7 @@ export default function Layout() {
                       ].map((item) => (
                         <div
                           key={item.section}
-                          onClick={() => navigate(`/${item.section}/${project.id}`)}
+                          onClick={() => navigate(`/app/${item.section}/${project.id}`)}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
                             padding: '7px 12px', cursor: 'pointer', borderRadius: '8px',
@@ -223,10 +222,10 @@ export default function Layout() {
         }}>
           <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: theme.textMuted }}>
             {currentWorkspace?.name || 'Kōdo'} /
-            <span style={{ color: theme.textSecondary }}> {location.pathname === '/' ? 'dashboard' : location.pathname.split('/')[1]}</span>
+            <span style={{ color: theme.textSecondary }}> {location.pathname.split('/')[2] || 'dashboard'}</span>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0D9E8A', animation: 'pulse 2s infinite' }} />
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0D9E8A' }} />
             <span style={{ fontSize: '11px', color: '#0D9E8A', fontFamily: 'JetBrains Mono, monospace' }}>Live</span>
           </div>
         </div>

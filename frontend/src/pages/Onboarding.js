@@ -45,7 +45,7 @@ export default function Onboarding() {
       const res = await joinWorkspace({ invite_code: inviteCode });
       localStorage.setItem('currentWorkspace', JSON.stringify(res.data));
       toast.success('Joined workspace');
-      navigate('/');
+      navigate('/app');
     } catch (err) {
       toast.error('Invalid invite code');
     } finally {
@@ -66,7 +66,7 @@ export default function Onboarding() {
         description: projectDesc,
       });
       toast.success('Project created');
-      navigate('/');
+      navigate('/app');
     } catch (err) {
       toast.error('Failed to create project');
     } finally {
@@ -98,13 +98,8 @@ export default function Onboarding() {
     color: '#fff', cursor: loading ? 'not-allowed' : 'pointer',
     opacity: loading ? 0.6 : 1,
     marginTop: '8px',
+    transition: 'all 0.15s',
   };
-
-  const steps = [
-    { num: 1, label: 'Get started' },
-    { num: 2, label: 'Workspace' },
-    { num: 3, label: 'First project' },
-  ];
 
   return (
     <div style={{
@@ -116,16 +111,14 @@ export default function Onboarding() {
     }}>
       <div style={{ width: '100%', maxWidth: '480px', padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '40px' }}>
-          {steps.map((s) => (
-            <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: step === s.num ? '32px' : '28px',
-                height: '8px',
-                borderRadius: '4px',
-                background: step >= s.num ? '#E8572A' : 'rgba(245,240,232,0.15)',
-                transition: 'all 0.3s ease',
-              }} />
-            </div>
+          {[1, 2, 3].map((s) => (
+            <div key={s} style={{
+              height: '6px',
+              width: step >= s ? '40px' : '24px',
+              borderRadius: '3px',
+              background: step >= s ? '#E8572A' : 'rgba(245,240,232,0.15)',
+              transition: 'all 0.3s ease',
+            }} />
           ))}
         </div>
 
@@ -137,10 +130,7 @@ export default function Onboarding() {
               Your team's workspace for tasks, code, docs, and AI — all in one place.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                onClick={() => { setMode('create'); setStep(2); }}
-                style={{ ...btnStyle, marginTop: 0 }}
-              >
+              <button onClick={() => { setMode('create'); setStep(2); }} style={btnStyle}>
                 Create a new workspace
               </button>
               <button
@@ -175,6 +165,7 @@ export default function Onboarding() {
               onChange={(e) => setWorkspaceName(e.target.value)}
               style={inputStyle}
               autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateWorkspace(); }}
             />
             <button onClick={handleCreateWorkspace} style={btnStyle} disabled={loading}>
               {loading ? 'Creating...' : 'Create workspace →'}
@@ -197,6 +188,7 @@ export default function Onboarding() {
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               style={{ ...inputStyle, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', fontSize: '18px', textAlign: 'center' }}
               autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleJoinWorkspace(); }}
             />
             <button onClick={handleJoinWorkspace} style={btnStyle} disabled={loading}>
               {loading ? 'Joining...' : 'Join workspace →'}
@@ -210,12 +202,12 @@ export default function Onboarding() {
               Create your first project
             </div>
             <div style={{ fontSize: '13px', color: 'rgba(245,240,232,0.4)', marginBottom: '6px' }}>
-              Workspace <span style={{ color: '#E8572A', fontWeight: 600 }}>{createdWorkspace?.name}</span> created.
+              Workspace <span style={{ color: '#E8572A', fontWeight: 600 }}>{createdWorkspace?.name}</span> is ready.
             </div>
             {createdWorkspace && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '8px 12px', background: 'rgba(13,158,138,0.1)', borderRadius: '8px', border: '0.5px solid rgba(13,158,138,0.2)' }}>
-                <span style={{ fontSize: '12px', color: '#0D9E8A' }}>Invite code:</span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', fontWeight: 600, color: '#0D9E8A', letterSpacing: '0.1em' }}>{createdWorkspace.invite_code}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '10px 14px', background: 'rgba(13,158,138,0.1)', borderRadius: '10px', border: '0.5px solid rgba(13,158,138,0.2)' }}>
+                <span style={{ fontSize: '12px', color: '#0D9E8A', fontWeight: 600 }}>Invite code:</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '16px', fontWeight: 700, color: '#0D9E8A', letterSpacing: '0.15em' }}>{createdWorkspace.invite_code}</span>
                 <span style={{ fontSize: '11px', color: 'rgba(13,158,138,0.6)', marginLeft: 'auto' }}>Share with teammates</span>
               </div>
             )}
@@ -226,6 +218,7 @@ export default function Onboarding() {
               onChange={(e) => setProjectName(e.target.value)}
               style={inputStyle}
               autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject(); }}
             />
             <textarea
               placeholder="Brief description (optional)"
@@ -237,8 +230,8 @@ export default function Onboarding() {
               {loading ? 'Creating...' : 'Launch Kōdo →'}
             </button>
             <div
-              onClick={() => navigate('/')}
-              style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: 'rgba(245,240,232,0.4)', cursor: 'pointer' }}
+              onClick={() => navigate('/app')}
+              style={{ textAlign: 'center', marginTop: '14px', fontSize: '13px', color: 'rgba(245,240,232,0.3)', cursor: 'pointer' }}
             >
               Skip for now
             </div>

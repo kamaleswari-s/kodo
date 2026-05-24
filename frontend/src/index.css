@@ -22,3 +22,26 @@ input, select, textarea, button {
 }
 
 * { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease; }
+select option {
+  background: #1C1917;
+  color: #F5F0E8;
+  font-family: 'Inter', sans-serif;
+}
+
+select {
+  color-scheme: dark;
+}
+
+select:focus {
+  outline: none;
+  border-color: #E8572A;
+}
+
+input:focus {
+  border-color: #E8572A;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #E8572A;
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { login } from '../utils/api';
@@ -16,6 +16,13 @@ const KodoLogo = ({ size = 64 }) => (
   </svg>
 );
 
+const greetings = [
+  'Welcome back',
+  'Good to see you',
+  'Ready to build?',
+  'Let\'s get coding',
+];
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +30,7 @@ export default function Login() {
   const { loginUser } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,14 +42,14 @@ export default function Login() {
     try {
       const res = await login({ email, password });
       loginUser(res.data.user, res.data.token);
-      toast.success(`Welcome back, ${res.data.user.name}`);
+      toast.success(`Welcome back, ${res.data.user.name.split(' ')[0]}`);
       const workspaces = await fetch('http://localhost:5000/api/workspaces/my', {
         headers: { Authorization: `Bearer ${res.data.token}` }
       }).then(r => r.json());
       if (workspaces.length === 0) {
         navigate('/onboarding');
       } else {
-        navigate('/');
+        navigate('/app');
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
@@ -52,12 +60,12 @@ export default function Login() {
 
   const inputStyle = {
     width: '100%',
-    background: theme.input,
-    border: `0.5px solid ${theme.inputBorder}`,
+    background: 'rgba(245,240,232,0.05)',
+    border: '0.5px solid rgba(245,240,232,0.15)',
     borderRadius: '10px',
     padding: '12px 14px',
     fontSize: '13px',
-    color: theme.text,
+    color: '#F5F0E8',
     outline: 'none',
     fontFamily: 'Inter, sans-serif',
   };
@@ -70,6 +78,16 @@ export default function Login() {
       position: 'relative',
       overflow: 'hidden',
     }}>
+      <style>{`
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        .float { animation: float 4s ease-in-out infinite; }
+        .pulse-dot { animation: pulse 2s ease-in-out infinite; }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        .task-card { background: rgba(245,240,232,0.06); border: 0.5px solid rgba(245,240,232,0.1); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+      `}</style>
+
       <div style={{
         position: 'absolute', inset: 0,
         backgroundImage: 'linear-gradient(rgba(232,87,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(232,87,42,0.04) 1px, transparent 1px)',
@@ -77,39 +95,52 @@ export default function Login() {
       }} />
 
       <div style={{
-        width: '420px', background: '#141210',
-        borderRight: '0.5px solid rgba(245,240,232,0.08)',
+        width: '440px', background: '#141210',
+        borderRight: '0.5px solid rgba(245,240,232,0.06)',
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '48px 40px', position: 'relative', zIndex: 1,
+        padding: '48px 40px',
+        position: 'relative', zIndex: 1,
+        justifyContent: 'space-between',
       }}>
-        <div style={{ marginBottom: '24px' }}>
-          <KodoLogo size={72} />
-        </div>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '28px', fontWeight: 600, color: '#F5F0E8', marginBottom: '6px' }}>
-          Kōdo
-        </div>
-        <div style={{ fontSize: '13px', color: 'rgba(245,240,232,0.4)', marginBottom: '40px', textAlign: 'center' }}>
-          The developer's way
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '48px' }}>
+            <KodoLogo size={36} />
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '18px', fontWeight: 600, color: '#F5F0E8' }}>Kōdo</span>
+          </div>
+
+          <div style={{ marginBottom: '40px' }}>
+            <div style={{ fontFamily: 'Fraunces, serif', fontSize: '32px', fontWeight: 700, color: '#F5F0E8', marginBottom: '8px', lineHeight: 1.2 }}>
+              The developer's<br />
+              <span style={{ color: '#E8572A' }}>way.</span>
+            </div>
+            <div style={{ fontSize: '14px', color: 'rgba(245,240,232,0.45)', lineHeight: 1.6 }}>
+              Tasks, code, docs, and AI — one workspace your team never wants to close.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[
+              { icon: '⚡', title: 'Real-time board', desc: 'Tasks update live for your whole team', color: '#E8572A' },
+              { icon: '✦', title: 'AI assistant', desc: 'Standups, blockers, code review powered by Llama', color: '#6C5CE7' },
+              { icon: '💻', title: 'Snippet library', desc: 'Save and share reusable code instantly', color: '#0D9E8A' },
+              { icon: '📄', title: 'Wiki', desc: 'Documentation that lives next to your code', color: '#F0A500' },
+            ].map((f) => (
+              <div key={f.title} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: `${f.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                  {f.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#F5F0E8', marginBottom: '2px' }}>{f.title}</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(245,240,232,0.4)', lineHeight: 1.5 }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-          {[
-            { icon: '⚡', title: 'Real-time board', desc: 'Tasks update live for your whole team' },
-            { icon: '✦', title: 'AI assistant', desc: 'Standups, blockers, code review' },
-            { icon: '💻', title: 'Snippet library', desc: 'Save and share reusable code' },
-            { icon: '📄', title: 'Wiki', desc: 'Documentation that lives next to your code' },
-          ].map((f) => (
-            <div key={f.title} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(232,87,42,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                {f.icon}
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#F5F0E8', marginBottom: '2px' }}>{f.title}</div>
-                <div style={{ fontSize: '12px', color: 'rgba(245,240,232,0.4)' }}>{f.desc}</div>
-              </div>
-            </div>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '40px' }}>
+          <span className="pulse-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0D9E8A', display: 'inline-block' }} />
+          <span style={{ fontSize: '11px', color: 'rgba(245,240,232,0.35)', fontFamily: 'JetBrains Mono, monospace' }}>System online</span>
         </div>
       </div>
 
@@ -125,7 +156,7 @@ export default function Login() {
           borderRadius: '20px', padding: '40px',
         }}>
           <div style={{ fontFamily: 'Fraunces, serif', fontSize: '28px', fontWeight: 700, color: '#F5F0E8', marginBottom: '6px' }}>
-            Welcome back
+            {greeting}
           </div>
           <div style={{ fontSize: '13px', color: 'rgba(245,240,232,0.4)', marginBottom: '28px' }}>
             Sign in to your Kōdo workspace
@@ -142,6 +173,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@team.dev"
                 style={inputStyle}
+                autoFocus
               />
             </div>
 
@@ -171,6 +203,7 @@ export default function Login() {
                 fontSize: '15px', fontWeight: 700,
                 color: '#fff', cursor: loading ? 'not-allowed' : 'pointer',
                 marginBottom: '16px',
+                transition: 'all 0.15s',
               }}
             >
               {loading ? 'Signing in...' : 'Sign in to Kōdo'}
@@ -184,6 +217,15 @@ export default function Login() {
               style={{ color: '#E8572A', cursor: 'pointer', fontWeight: 600 }}
             >
               Create one free
+            </span>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <span
+              onClick={() => navigate('/')}
+              style={{ fontSize: '12px', color: 'rgba(245,240,232,0.25)', cursor: 'pointer' }}
+            >
+              ← Back to home
             </span>
           </div>
         </div>

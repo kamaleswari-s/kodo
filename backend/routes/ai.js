@@ -4,7 +4,8 @@ const auth = require('../middleware/auth');
 const pool = require('../db');
 require('dotenv').config();
 
-const callAI = async (prompt) => {
+const callAI = async (messages) => {
+  console.log('Calling Featherless API with', messages.length, 'messages');
   const response = await fetch('https://api.featherless.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -12,15 +13,43 @@ const callAI = async (prompt) => {
       'Authorization': `Bearer ${process.env.FEATHERLESS_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'meta-llama/Llama-3.3-70B-Instruct',
-      messages: [{ role: 'user', content: prompt }],
+      model: 'mistralai/Mistral-7B-Instruct-v0.3',
+      messages,
       max_tokens: 1000,
-      temperature: 0.7,
+      temperature: 0.75,
     }),
   });
   const data = await response.json();
+  console.log('Featherless response status:', response.status);
+  console.log('Featherless data:', JSON.stringify(data).slice(0, 300));
+  if (!data.choices || !data.choices[0]) {
+    throw new Error('No choices in response: ' + JSON.stringify(data));
+  }
   return data.choices[0].message.content;
 };
+
+router.post('/chat', auth, async (req, res) => {
+  const { message, history } = req.body;
+  console.log('Chat request received:', message);
+  try {
+    const systemMessage = {
+      role: 'system',
+      content: `You are Aura, a friendly and intelligent AI assistant built into Kōdo — a developer collaboration platform. You are personal, warm, and helpful like a senior developer friend. You help with coding questions, project management, debugging, career advice, and anything a developer team needs. Keep responses concise but useful. Use emojis occasionally to feel friendly.`
+    };
+    const conversationHistory = history || [];
+    const messages = [
+      systemMessage,
+      ...conversationHistory,
+      { role: 'user', content: message }
+    ];
+    const reply = await callAI(messages);
+    console.log('Reply generated successfully');
+    res.json({ reply });
+  } catch (err) {
+    console.error('Chat error:', err.message);
+    res.status(500).json({ message: 'AI error', error: err.message });
+  }
+});
 
 router.post('/standup', auth, async (req, res) => {
   const { project_id } = req.body;
@@ -35,10 +64,11 @@ router.post('/standup', auth, async (req, res) => {
     const taskList = tasks.rows.map(t =>
       `${t.title} (${t.status}, ${t.priority}, assigned to ${t.assignee || 'unassigned'})`
     ).join('\n');
-    const prompt = `Generate a professional daily standup report based on these tasks:\n${taskList}\n\nFormat it with sections: Done, In Progress, Blockers. Keep it concise and professional.`;
-    const report = await callAI(prompt);
-    res.json({ report });
+    const prompt = `Generate a professional daily standup report based on these tasks:\n${taskList || 'No tasks yet'}\n\nFormat it with sections: Done, In Progress, Blockers. Keep it concise and professional.`;
+    const reply = await callAI([{ role: 'user', content: prompt }]);
+    res.json({ report: reply });
   } catch (err) {
+    console.error('Standup error:', err.message);
     res.status(500).json({ message: 'AI error', error: err.message });
   }
 });
@@ -51,10 +81,11 @@ router.post('/summarize', auth, async (req, res) => {
       [project_id]
     );
     const taskList = tasks.rows.map(t => `${t.title}: ${t.status} (${t.priority})`).join('\n');
-    const prompt = `Summarize the progress of this project based on these tasks:\n${taskList}\n\nProvide a brief summary of overall progress, what is going well, and what needs attention.`;
-    const summary = await callAI(prompt);
-    res.json({ summary });
+    const prompt = `Summarize the progress of this project based on these tasks:\n${taskList || 'No tasks yet'}\n\nProvide a brief summary of overall progress, what is going well, and what needs attention.`;
+    const reply = await callAI([{ role: 'user', content: prompt }]);
+    res.json({ summary: reply });
   } catch (err) {
+    console.error('Summarize error:', err.message);
     res.status(500).json({ message: 'AI error', error: err.message });
   }
 });
@@ -72,22 +103,24 @@ router.post('/blockers', auth, async (req, res) => {
       `${t.title} (in progress since ${new Date(t.updated_at).toLocaleDateString()})`
     ).join('\n');
     const prompt = `Identify potential blockers from these in-progress tasks:\n${taskList || 'No tasks in progress'}\n\nHighlight which tasks might be stuck and suggest actions.`;
-    const blockers = await callAI(prompt);
-    res.json({ blockers });
+    const reply = await callAI([{ role: 'user', content: prompt }]);
+    res.json({ blockers: reply });
   } catch (err) {
+    console.error('Blockers error:', err.message);
     res.status(500).json({ message: 'AI error', error: err.message });
   }
 });
 
 router.post('/breakdown', auth, async (req, res) => {
-  const { feature, project_id } = req.body;
+  const { feature } = req.body;
   try {
-    const prompt = `Break down this feature into specific development tasks: "${feature}"\n\nReturn ONLY a JSON array of task objects with fields: title (string), priority (P0/P1/P2), status (always "todo"). Return only valid JSON, no markdown, no explanation.`;
-    const text = await callAI(prompt);
-    const clean = text.replace(/\`\`\`json\n?/g, '').replace(/\`\`\`\n?/g, '').trim();
+    const prompt = `Break down this feature into specific development tasks: "${feature}"\n\nReturn ONLY a JSON array of task objects with fields: title (string), priority (Critical/Important/Low), status (always "todo"). Return only valid JSON, no markdown, no explanation.`;
+    const text = await callAI([{ role: 'user', content: prompt }]);
+    const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const tasks = JSON.parse(clean);
     res.json({ tasks });
   } catch (err) {
+    console.error('Breakdown error:', err.message);
     res.status(500).json({ message: 'AI error', error: err.message });
   }
 });
@@ -95,12 +128,25 @@ router.post('/breakdown', auth, async (req, res) => {
 router.post('/review-code', auth, async (req, res) => {
   const { code, language } = req.body;
   try {
-    const prompt = `Review this ${language} code and provide feedback:\n\`\`\`${language}\n${code}\n\`\`\`\n\nReturn ONLY a JSON object with: score (1-10), verdict (string), bugs (array of strings), performance (array of strings), good_practices (array of strings). Return only valid JSON, no markdown, no explanation.`;
-    const text = await callAI(prompt);
-    const clean = text.replace(/\`\`\`json\n?/g, '').replace(/\`\`\`\n?/g, '').trim();
+    const prompt = `Review this ${language} code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nReturn ONLY a JSON object with: score (1-10), verdict (string), bugs (array of strings), performance (array of strings), security (array of strings), good_practices (array of strings). Return only valid JSON, no markdown.`;
+    const text = await callAI([{ role: 'user', content: prompt }]);
+    const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const review = JSON.parse(clean);
     res.json(review);
   } catch (err) {
+    console.error('Code review error:', err.message);
+    res.status(500).json({ message: 'AI error', error: err.message });
+  }
+});
+
+router.post('/review-pr', auth, async (req, res) => {
+  const { pr_url } = req.body;
+  try {
+    const prompt = `A developer has submitted this GitHub Pull Request URL for review: ${pr_url}\n\nProvide a comprehensive code review guide covering: security vulnerabilities to check, performance bottlenecks, code quality standards, and best practices. Be specific and actionable.`;
+    const reply = await callAI([{ role: 'user', content: prompt }]);
+    res.json({ review: reply });
+  } catch (err) {
+    console.error('PR review error:', err.message);
     res.status(500).json({ message: 'AI error', error: err.message });
   }
 });
