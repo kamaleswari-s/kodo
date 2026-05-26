@@ -94,7 +94,7 @@ export default function Register() {
       }} />
 
       <div style={{
-        width: '100%', maxWidth: '460px',
+        width: '100%', maxWidth: '520px',
         background: 'rgba(245,240,232,0.04)',
         border: '0.5px solid rgba(245,240,232,0.1)',
         borderRadius: '20px', padding: '40px',
@@ -124,7 +124,7 @@ export default function Register() {
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(245,240,232,0.4)', marginBottom: '6px' }}>Email</div>
             <input
               type="email"
-              placeholder="you@team.dev"
+              placeholder="e.g. kamaleswari@gmail.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               style={inputStyle}
