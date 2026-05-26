@@ -165,6 +165,7 @@ export default function Layout() {
                       {[
                         { label: 'Board', icon: '📋', section: 'board' },
                         { label: 'List view', icon: '📝', section: 'list' },
+                        { label: 'Calendar', icon: '📅', section: 'calendar' },
                         { label: 'Snippets', icon: '💻', section: 'snippets' },
                         { label: 'Wiki', icon: '📄', section: 'wiki' },
                         { label: '✦ AI Assistant', icon: '', section: 'ai' },

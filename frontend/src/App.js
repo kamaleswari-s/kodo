@@ -10,6 +10,7 @@ import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Board from './pages/Board';
 import ListView from './pages/ListView';
+import CalendarView from './pages/CalendarView';
 import Snippets from './pages/Snippets';
 import Wiki from './pages/Wiki';
 import AIAssistant from './pages/AIAssistant';
@@ -62,6 +63,7 @@ function AppContent() {
             <Route index element={<Dashboard />} />
             <Route path="board/:projectId" element={<Board />} />
             <Route path="list/:projectId" element={<ListView />} />
+            <Route path="calendar/:projectId" element={<CalendarView />} />
             <Route path="snippets/:projectId" element={<Snippets />} />
             <Route path="wiki/:projectId" element={<Wiki />} />
             <Route path="ai/:projectId" element={<AIAssistant />} />

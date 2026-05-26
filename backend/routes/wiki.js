@@ -34,6 +34,23 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+router.get('/:id/history', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT wh.*, u.name as updated_by_name
+       FROM wiki_history wh
+       LEFT JOIN users u ON wh.updated_by = u.id
+       WHERE wh.page_id = $1
+       ORDER BY wh.created_at DESC
+       LIMIT 20`,
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 router.post('/', auth, async (req, res) => {
   const { project_id, title, content } = req.body;
   try {
@@ -50,6 +67,16 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   const { title, content } = req.body;
   try {
+    const current = await pool.query(
+      'SELECT * FROM wiki_pages WHERE id = $1',
+      [req.params.id]
+    );
+    if (current.rows.length > 0) {
+      await pool.query(
+        'INSERT INTO wiki_history (page_id, title, content, updated_by) VALUES ($1, $2, $3, $4)',
+        [req.params.id, current.rows[0].title, current.rows[0].content, req.user.id]
+      );
+    }
     const result = await pool.query(
       'UPDATE wiki_pages SET title=$1, content=$2, updated_by=$3, updated_at=NOW() WHERE id=$4 RETURNING *',
       [title, content, req.user.id, req.params.id]

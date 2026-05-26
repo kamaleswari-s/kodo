@@ -6,7 +6,8 @@ const auth = require('../middleware/auth');
 router.get('/project/:project_id', auth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT t.*, u.name as assignee_name, u.avatar_color as assignee_color
+      `SELECT t.*, u.name as assignee_name, u.avatar_color as assignee_color,
+       to_char(t.due_date, 'YYYY-MM-DD') as due_date
        FROM tasks t
        LEFT JOIN users u ON t.assignee_id = u.id
        WHERE t.project_id = $1
@@ -24,8 +25,9 @@ router.post('/', auth, async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO tasks (project_id, title, description, status, priority, assignee_id, due_date, labels, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [project_id, title, description, status || 'todo', priority || 'P1', assignee_id, due_date, labels || [], req.user.id]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *,
+       to_char(due_date, 'YYYY-MM-DD') as due_date`,
+      [project_id, title, description, status || 'todo', priority || 'Important', assignee_id, due_date, labels || [], req.user.id]
     );
     const task = result.rows[0];
     const project = await pool.query('SELECT workspace_id FROM projects WHERE id = $1', [project_id]);
@@ -47,7 +49,8 @@ router.put('/:id', auth, async (req, res) => {
         title=$1, description=$2, status=$3, priority=$4,
         assignee_id=$5, due_date=$6, labels=$7, position=$8,
         updated_at=NOW()
-       WHERE id=$9 RETURNING *`,
+       WHERE id=$9 RETURNING *,
+       to_char(due_date, 'YYYY-MM-DD') as due_date`,
       [title, description, status, priority, assignee_id, due_date, labels, position, req.params.id]
     );
     const task = result.rows[0];

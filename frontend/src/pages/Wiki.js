@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { getWikiPages, createWikiPage, updateWikiPage, deleteWikiPage } from '../utils/api';
 import toast from 'react-hot-toast';
 
 export default function Wiki() {
@@ -15,12 +14,13 @@ export default function Wiki() {
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
-  useEffect(() => {
-    fetchPages();
-  }, [projectId]);
+  useEffect(() => { fetchPages(); }, [projectId]);
 
   const fetchPages = async () => {
     try {
@@ -34,6 +34,21 @@ export default function Wiki() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async (pageId) => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/wiki/${pageId}/history`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -67,6 +82,7 @@ export default function Wiki() {
       });
       toast.success('Page saved');
       setEditing(false);
+      setShowHistory(false);
       fetchPages();
     } catch (err) {
       toast.error('Failed to save');
@@ -119,6 +135,19 @@ export default function Wiki() {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleRestoreVersion = (version) => {
+    setEditForm({ title: version.title, content: version.content });
+    setShowHistory(false);
+    setEditing(true);
+    toast.success('Version restored — click Save to apply');
+  };
+
+  const handleViewHistory = async () => {
+    setShowHistory(true);
+    setEditing(false);
+    await fetchHistory(selected.id);
   };
 
   const inputStyle = {
@@ -179,7 +208,7 @@ export default function Wiki() {
             <div style={{ color: theme.textMuted, fontSize: '12px', padding: '10px', lineHeight: 1.6 }}>No pages yet. Click + to create.</div>
           ) : (
             pages.map((page) => (
-              <div key={page.id} onClick={() => { setSelected(page); setEditing(false); }} style={{ padding: '8px 10px', borderRadius: '8px', cursor: 'pointer', background: selected?.id === page.id ? theme.navActive : 'transparent', borderLeft: selected?.id === page.id ? `2px solid ${theme.navActiveBorder}` : '2px solid transparent', fontSize: '12px', fontWeight: selected?.id === page.id ? 600 : 400, color: selected?.id === page.id ? theme.accent : theme.textSecondary }}>
+              <div key={page.id} onClick={() => { setSelected(page); setEditing(false); setShowHistory(false); }} style={{ padding: '8px 10px', borderRadius: '8px', cursor: 'pointer', background: selected?.id === page.id ? theme.navActive : 'transparent', borderLeft: selected?.id === page.id ? `2px solid ${theme.navActiveBorder}` : '2px solid transparent', fontSize: '12px', fontWeight: selected?.id === page.id ? 600 : 400, color: selected?.id === page.id ? theme.accent : theme.textSecondary }}>
                 📄 {page.title}
               </div>
             ))
@@ -211,13 +240,16 @@ export default function Wiki() {
                   <>
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
                     <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ background: 'rgba(108,92,231,0.15)', border: '0.5px solid rgba(108,92,231,0.3)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, color: '#6C5CE7', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      {uploading ? '⏳ Uploading...' : '🖼 Image'}
+                      {uploading ? '⏳' : '🖼 Image'}
                     </button>
                     <button onClick={handleSave} style={{ background: '#0D9E8A', border: 'none', borderRadius: '8px', padding: '6px 14px', fontFamily: 'Playfair Display, serif', fontStyle: 'italic', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>Save</button>
                     <button onClick={() => setEditing(false)} style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: theme.textSecondary, cursor: 'pointer' }}>Cancel</button>
                   </>
+                ) : showHistory ? (
+                  <button onClick={() => setShowHistory(false)} style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: theme.textSecondary, cursor: 'pointer' }}>← Back</button>
                 ) : (
                   <>
+                    <button onClick={handleViewHistory} style={{ background: 'rgba(240,165,0,0.1)', border: '0.5px solid rgba(240,165,0,0.3)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, color: '#F0A500', cursor: 'pointer' }}>🕐 History</button>
                     <button onClick={() => { setEditing(true); setEditForm({ title: selected.title, content: selected.content || '' }); }} style={{ background: 'rgba(232,87,42,0.1)', border: '0.5px solid rgba(232,87,42,0.3)', borderRadius: '8px', padding: '6px 14px', fontFamily: 'Playfair Display, serif', fontStyle: 'italic', fontSize: '12px', fontWeight: 700, color: '#E8572A', cursor: 'pointer' }}>Edit</button>
                     <button onClick={handleDelete} style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: theme.textMuted, cursor: 'pointer' }}>Delete</button>
                   </>
@@ -226,13 +258,50 @@ export default function Wiki() {
             </div>
 
             <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
-              {editing ? (
+              {showHistory ? (
+                <div>
+                  <div style={{ fontFamily: 'Fraunces, serif', fontSize: '18px', fontWeight: 700, color: theme.text, marginBottom: '16px' }}>Version history</div>
+                  {loadingHistory ? (
+                    <div style={{ color: theme.textMuted, fontSize: '13px' }}>Loading history...</div>
+                  ) : history.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: theme.textMuted }}>
+                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>🕐</div>
+                      <div style={{ fontSize: '14px' }}>No version history yet. Edit and save the page to start tracking changes.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {history.map((version, i) => (
+                        <div key={version.id} style={{ background: theme.bg, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '12px', padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: theme.text, marginBottom: '2px' }}>{version.title}</div>
+                              <div style={{ fontSize: '11px', color: theme.textMuted, fontFamily: 'JetBrains Mono, monospace' }}>
+                                {new Date(version.created_at).toLocaleString('en-IN')} · by {version.updated_by_name}
+                                {i === 0 && <span style={{ marginLeft: '8px', background: 'rgba(13,158,138,0.15)', color: '#0D9E8A', padding: '1px 6px', borderRadius: '4px', fontSize: '10px' }}>Latest saved</span>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRestoreVersion(version)}
+                              style={{ background: 'rgba(232,87,42,0.1)', border: '0.5px solid rgba(232,87,42,0.3)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 600, color: '#E8572A', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              Restore
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '12px', color: theme.textMuted, lineHeight: 1.5, maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {version.content?.slice(0, 200)}...
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : editing ? (
                 <textarea
                   ref={textareaRef}
                   value={editForm.content}
                   onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
                   style={{ ...inputStyle, height: '100%', resize: 'none', fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', lineHeight: 1.7, minHeight: '400px' }}
-                  placeholder="Write in markdown...&#10;# Heading&#10;## Subheading&#10;- Bullet point&#10;&#10;Click 🖼 Image button above to upload images"
+                  placeholder="Write in markdown..."
                 />
               ) : (
                 <div>{renderContent(selected.content)}</div>
@@ -249,7 +318,7 @@ export default function Wiki() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
               <div style={{ fontFamily: 'Fraunces, serif', fontSize: '20px', fontWeight: 700, color: theme.text, marginBottom: '8px' }}>Your project wiki</div>
-              <div style={{ fontSize: '13px', color: theme.textMuted, marginBottom: '20px', lineHeight: 1.7, maxWidth: '320px' }}>Document your architecture, API references, and decisions. Supports markdown and image uploads.</div>
+              <div style={{ fontSize: '13px', color: theme.textMuted, marginBottom: '20px', lineHeight: 1.7, maxWidth: '320px' }}>Document your architecture, API references, and decisions. Supports markdown, image uploads, and version history.</div>
               <button onClick={() => setShowNew(true)} style={{ background: '#E8572A', border: 'none', borderRadius: '8px', padding: '10px 20px', fontFamily: 'Playfair Display, serif', fontStyle: 'italic', fontSize: '13px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>Create first page</button>
             </div>
           </div>
