@@ -27,6 +27,8 @@ app.use('/api/wiki', require('./routes/wiki'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 const connectedUsers = {};
 
@@ -41,6 +43,10 @@ io.on('connection', (socket) => {
     socket.join(`project-${projectId}`);
   });
 
+  socket.on('join-user', (userId) => {
+    socket.join(`user-${userId}`);
+  });
+
   socket.on('user-presence', (data) => {
     connectedUsers[socket.id] = data;
     io.to(`project-${data.projectId}`).emit('presence-update', Object.values(connectedUsers));
@@ -48,6 +54,10 @@ io.on('connection', (socket) => {
 
   socket.on('task-update', (data) => {
     socket.to(`project-${data.projectId}`).emit('task-updated', data);
+  });
+
+  socket.on('send-notification', (data) => {
+    io.to(`user-${data.userId}`).emit('new-notification', data);
   });
 
   socket.on('disconnect', () => {

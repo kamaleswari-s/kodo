@@ -15,6 +15,9 @@ import Wiki from './pages/Wiki';
 import AIAssistant from './pages/AIAssistant';
 import Activity from './pages/Activity';
 import Members from './pages/Members';
+import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
+import ProPlan from './pages/ProPlan';
 import Layout from './components/Layout';
 
 const PrivateRoute = ({ children }) => {
@@ -64,6 +67,9 @@ function AppContent() {
             <Route path="ai/:projectId" element={<AIAssistant />} />
             <Route path="activity" element={<Activity />} />
             <Route path="members" element={<Members />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="pro" element={<ProPlan />} />
           </Route>
         </Routes>
       </BrowserRouter>
