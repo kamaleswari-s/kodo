@@ -27,23 +27,20 @@ export default function Layout() {
   const [projects, setProjects] = useState([]);
   const [expandedProject, setExpandedProject] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     fetchWorkspaces();
     fetchUnreadCount();
     if (user?.id) {
       socket.emit('join-user', user.id);
-      socket.on('new-notification', () => {
-        setUnreadCount(prev => prev + 1);
-      });
+      socket.on('new-notification', () => setUnreadCount(prev => prev + 1));
     }
     return () => socket.off('new-notification');
   }, [user]);
 
   useEffect(() => {
-    if (currentWorkspace) {
-      fetchProjects(currentWorkspace.id);
-    }
+    if (currentWorkspace) fetchProjects(currentWorkspace.id);
   }, [currentWorkspace]);
 
   const fetchUnreadCount = async () => {
@@ -96,8 +93,7 @@ export default function Layout() {
         background: isActive(path) ? theme.navActive : 'transparent',
         borderLeft: isActive(path) ? `2px solid ${theme.navActiveBorder}` : '2px solid transparent',
         color: isActive(path) ? theme.accent : theme.textSecondary,
-        fontSize: '12px', fontWeight: 500,
-        transition: 'all 0.15s',
+        fontSize: '12px', fontWeight: 500, transition: 'all 0.15s',
       }}
       onMouseEnter={(e) => { if (!isActive(path)) e.currentTarget.style.background = 'rgba(128,128,128,0.08)'; }}
       onMouseLeave={(e) => { if (!isActive(path)) e.currentTarget.style.background = 'transparent'; }}
@@ -112,14 +108,25 @@ export default function Layout() {
     </div>
   );
 
+  if (focusMode) {
+    return (
+      <div style={{ height: '100vh', background: theme.bg, position: 'relative' }}>
+        <button
+          onClick={() => setFocusMode(false)}
+          style={{ position: 'fixed', top: '12px', right: '12px', zIndex: 100, background: 'rgba(232,87,42,0.9)', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}
+        >
+          ✕ Exit focus
+        </button>
+        <div style={{ height: '100%', overflow: 'auto', padding: '24px' }}>
+          <Outlet context={{ currentWorkspace, projects, fetchProjects, theme }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: theme.bg }}>
-      <div style={{
-        width: '240px', background: theme.sidebar,
-        borderRight: `0.5px solid ${theme.cardBorder}`,
-        display: 'flex', flexDirection: 'column',
-        flexShrink: 0, overflowY: 'auto',
-      }}>
+      <div style={{ width: '240px', background: theme.sidebar, borderRight: `0.5px solid ${theme.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
         <div style={{ padding: '16px 14px', borderBottom: `0.5px solid ${theme.cardBorder}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
             <KodoLogo size={36} theme={theme} />
@@ -197,10 +204,7 @@ export default function Layout() {
         </div>
 
         <div style={{ padding: '10px', borderTop: `0.5px solid ${theme.cardBorder}` }}>
-          <div
-            onClick={() => navigate('/app/pro')}
-            style={{ background: 'linear-gradient(135deg, rgba(232,87,42,0.15), rgba(108,92,231,0.15))', border: '0.5px solid rgba(232,87,42,0.3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
+          <div onClick={() => navigate('/app/pro')} style={{ background: 'linear-gradient(135deg, rgba(232,87,42,0.15), rgba(108,92,231,0.15))', border: '0.5px solid rgba(232,87,42,0.3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '14px' }}>✦</span>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#E8572A' }}>Upgrade to Pro</div>
@@ -215,11 +219,7 @@ export default function Layout() {
               { key: 'navy', color: '#1B2A4A', border: '#E8572A' },
               { key: 'carbon', color: '#1C1917', border: '#6C5CE7' },
             ].map((t) => (
-              <div
-                key={t.key}
-                onClick={() => switchTheme(t.key)}
-                style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: themeName === t.key ? `3px solid ${t.border}` : `1.5px solid ${theme.cardBorder}`, cursor: 'pointer', transition: 'all 0.15s' }}
-              />
+              <div key={t.key} onClick={() => switchTheme(t.key)} style={{ width: '22px', height: '22px', borderRadius: '50%', background: t.color, border: themeName === t.key ? `3px solid ${t.border}` : `1.5px solid ${theme.cardBorder}`, cursor: 'pointer', transition: 'all 0.15s' }} />
             ))}
           </div>
 
@@ -244,6 +244,13 @@ export default function Layout() {
             <span style={{ color: theme.textSecondary }}> {location.pathname.split('/')[2] || 'dashboard'}</span>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={() => setFocusMode(true)}
+              style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '6px', padding: '4px 10px', fontSize: '11px', color: theme.textMuted, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}
+              title="Focus mode — hide sidebar and topbar"
+            >
+              ⊞ Focus
+            </button>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0D9E8A' }} />
             <span style={{ fontSize: '11px', color: '#0D9E8A', fontFamily: 'JetBrains Mono, monospace' }}>Live</span>
           </div>

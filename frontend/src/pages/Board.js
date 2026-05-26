@@ -54,14 +54,21 @@ export default function Board() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [someoneTyping, setSomeoneTyping] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
   const commentsEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const selectedTaskRef = useRef(null);
   const [newTask, setNewTask] = useState({
     title: '', description: '', priority: 'Important',
     assignee_id: '', due_date: '', labels: [],
   });
+
+  useEffect(() => {
+    selectedTaskRef.current = selectedTask;
+  }, [selectedTask]);
 
   useEffect(() => {
     fetchData();
@@ -69,9 +76,17 @@ export default function Board() {
     socket.emit('user-presence', { projectId, userId: user.id, userName: user.name });
     socket.on('task-updated', () => fetchTasks());
     socket.on('presence-update', (users) => setPresence(users.filter(u => u.userId !== user.id)));
+    socket.on('user-typing', (data) => {
+      if (selectedTaskRef.current && data.taskId === selectedTaskRef.current.id) {
+        setSomeoneTyping(data.userName);
+      }
+    });
+    socket.on('user-stop-typing', () => setSomeoneTyping(''));
     return () => {
       socket.off('task-updated');
       socket.off('presence-update');
+      socket.off('user-typing');
+      socket.off('user-stop-typing');
     };
   }, [projectId]);
 
@@ -79,6 +94,7 @@ export default function Board() {
     if (selectedTask) {
       fetchComments(selectedTask.id);
       fetchAttachments(selectedTask.id);
+      setSomeoneTyping('');
     }
   }, [selectedTask?.id]);
 
@@ -148,10 +164,7 @@ export default function Board() {
         body: formData,
       });
       const data = await res.json();
-      if (data.id) {
-        setAttachments(prev => [data, ...prev]);
-        toast.success('File attached');
-      }
+      if (data.id) { setAttachments(prev => [data, ...prev]); toast.success('File attached'); }
     } catch (err) {
       toast.error('Failed to upload file');
     } finally {
@@ -169,7 +182,7 @@ export default function Board() {
       setAttachments(prev => prev.filter(a => a.id !== id));
       toast.success('Attachment removed');
     } catch (err) {
-      toast.error('Failed to remove attachment');
+      toast.error('Failed to remove');
     }
   };
 
@@ -177,12 +190,22 @@ export default function Board() {
     if (!newComment.trim()) return;
     try {
       await createComment(selectedTask.id, { content: newComment });
+      socket.emit('stop-typing', { projectId, taskId: selectedTask.id });
       setNewComment('');
       fetchComments(selectedTask.id);
       toast.success('Comment added');
     } catch (err) {
       toast.error('Failed to add comment');
     }
+  };
+
+  const handleCommentChange = (e) => {
+    setNewComment(e.target.value);
+    socket.emit('typing', { projectId, taskId: selectedTask.id, userName: user.name });
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('stop-typing', { projectId, taskId: selectedTask.id });
+    }, 1500);
   };
 
   const handleCreateTask = async (status) => {
@@ -252,9 +275,7 @@ export default function Board() {
   const getMentions = (content) => {
     const parts = content.split(/(@\w+)/g);
     return parts.map((part, i) => {
-      if (part.startsWith('@')) {
-        return <span key={i} style={{ color: '#6C5CE7', fontWeight: 600 }}>{part}</span>;
-      }
+      if (part.startsWith('@')) return <span key={i} style={{ color: '#6C5CE7', fontWeight: 600 }}>{part}</span>;
       return part;
     });
   };
@@ -264,24 +285,15 @@ export default function Board() {
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '🖼';
     if (['pdf'].includes(ext)) return '📄';
     if (['doc', 'docx'].includes(ext)) return '📝';
-    if (['xls', 'xlsx'].includes(ext)) return '📊';
-    if (['zip', 'rar', '7z'].includes(ext)) return '📦';
+    if (['zip', 'rar'].includes(ext)) return '📦';
     if (['js', 'ts', 'py', 'java', 'cpp', 'go'].includes(ext)) return '💻';
     return '📎';
   };
 
   const inputStyle = {
-    width: '100%',
-    background: theme.input,
-    border: `0.5px solid ${theme.inputBorder}`,
-    borderRadius: '8px',
-    padding: '9px 12px',
-    fontSize: '12px',
-    color: theme.text,
-    outline: 'none',
-    fontFamily: 'Inter, sans-serif',
-    marginBottom: '8px',
-    colorScheme: 'dark',
+    width: '100%', background: theme.input, border: `0.5px solid ${theme.inputBorder}`,
+    borderRadius: '8px', padding: '9px 12px', fontSize: '12px', color: theme.text,
+    outline: 'none', fontFamily: 'Inter, sans-serif', marginBottom: '8px', colorScheme: 'dark',
   };
 
   if (loading) return (
@@ -294,15 +306,11 @@ export default function Board() {
     <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexShrink: 0 }}>
         <div>
-          <div style={{ fontFamily: 'Fraunces, serif', fontSize: '24px', fontWeight: 700, color: theme.text, marginBottom: '4px' }}>
-            {project?.name}
-          </div>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: '24px', fontWeight: 700, color: theme.text, marginBottom: '4px' }}>{project?.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0D9E8A' }} />
-              <span style={{ fontSize: '11px', color: '#0D9E8A', fontFamily: 'JetBrains Mono, monospace' }}>
-                {1 + presence.length} online
-              </span>
+              <span style={{ fontSize: '11px', color: '#0D9E8A', fontFamily: 'JetBrains Mono, monospace' }}>{1 + presence.length} online</span>
             </div>
             {presence.slice(0, 3).map((p, i) => (
               <div key={i} style={{ fontSize: '11px', color: theme.textMuted }}>{p.userName} is here</div>
@@ -315,9 +323,7 @@ export default function Board() {
               {m.name?.charAt(0).toUpperCase()}
             </div>
           ))}
-          <div style={{ marginLeft: '8px', fontSize: '12px', color: theme.textMuted, fontFamily: 'JetBrains Mono, monospace' }}>
-            {members.length} member{members.length !== 1 ? 's' : ''}
-          </div>
+          <div style={{ marginLeft: '8px', fontSize: '12px', color: theme.textMuted, fontFamily: 'JetBrains Mono, monospace' }}>{members.length} member{members.length !== 1 ? 's' : ''}</div>
         </div>
       </div>
 
@@ -334,7 +340,6 @@ export default function Board() {
                 </div>
                 <div onClick={() => setShowNewTask(col.key)} style={{ width: '22px', height: '22px', borderRadius: '6px', background: 'rgba(232,87,42,0.1)', color: '#E8572A', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 700 }}>+</div>
               </div>
-
               <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
                 {showNewTask === col.key && (
                   <div style={{ background: theme.bg, border: `0.5px solid rgba(232,87,42,0.3)`, borderRadius: '10px', padding: '10px', marginBottom: '8px' }}>
@@ -356,7 +361,6 @@ export default function Board() {
                     </div>
                   </div>
                 )}
-
                 {colTasks.map((task) => {
                   const prioStyle = getPriorityStyle(task.priority);
                   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
@@ -367,7 +371,6 @@ export default function Board() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                         <span style={{ background: prioStyle.bg, color: prioStyle.color, fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>{task.priority}</span>
                         {task.assignee_name && <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: task.assignee_color || '#E8572A', color: '#fff', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={task.assignee_name}>{task.assignee_name?.charAt(0).toUpperCase()}</div>}
-                        {task.labels?.slice(0, 2).map((label) => <span key={label} style={{ background: 'rgba(108,92,231,0.15)', color: '#6C5CE7', fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>{label}</span>)}
                         {isOverdue && <span style={{ background: 'rgba(232,87,42,0.15)', color: '#E8572A', fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>overdue</span>}
                         {task.due_date && <span style={{ fontSize: '10px', color: theme.textMuted, marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{new Date(task.due_date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>}
                       </div>
@@ -431,21 +434,17 @@ export default function Board() {
                 </div>
               </div>
               {attachments.length === 0 ? (
-                <div style={{ fontSize: '12px', color: theme.textMuted, padding: '10px', textAlign: 'center', border: `0.5px dashed ${theme.cardBorder}`, borderRadius: '8px' }}>
-                  No attachments yet. Click "+ Attach file" to add one.
-                </div>
+                <div style={{ fontSize: '12px', color: theme.textMuted, padding: '10px', textAlign: 'center', border: `0.5px dashed ${theme.cardBorder}`, borderRadius: '8px' }}>No attachments yet</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {attachments.map((att) => (
                     <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: theme.bg, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px' }}>
                       <span style={{ fontSize: '16px' }}>{getFileIcon(att.original_name)}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: 500, color: '#6C5CE7', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {att.original_name}
-                        </a>
+                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: 500, color: '#6C5CE7', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.original_name}</a>
                         <div style={{ fontSize: '10px', color: theme.textMuted }}>{formatFileSize(att.file_size)} · {att.uploaded_by_name} · {formatTime(att.created_at)}</div>
                       </div>
-                      <button onClick={() => handleDeleteAttachment(att.id)} style={{ background: 'transparent', border: 'none', color: theme.textMuted, cursor: 'pointer', fontSize: '14px', padding: '2px' }}>✕</button>
+                      <button onClick={() => handleDeleteAttachment(att.id)} style={{ background: 'transparent', border: 'none', color: theme.textMuted, cursor: 'pointer', fontSize: '14px' }}>✕</button>
                     </div>
                   ))}
                 </div>
@@ -479,12 +478,22 @@ export default function Board() {
                 )}
                 <div ref={commentsEndRef} />
               </div>
+              {someoneTyping && (
+                <div style={{ fontSize: '11px', color: '#6C5CE7', fontStyle: 'italic', padding: '4px 8px', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ display: 'inline-flex', gap: '2px' }}>
+                    {[0,1,2].map(i => (
+                      <span key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#6C5CE7', display: 'inline-block', animation: `bounce 1s ease-in-out ${i * 0.2}s infinite` }} />
+                    ))}
+                  </span>
+                  {someoneTyping} is typing...
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#E8572A', color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <input type="text" placeholder="Add a comment... use @name to mention" value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }} style={{ width: '100%', background: theme.input, border: `0.5px solid ${theme.inputBorder}`, borderRadius: '8px', padding: '8px 40px 8px 12px', fontSize: '12px', color: theme.text, outline: 'none', fontFamily: 'Inter, sans-serif' }} />
+                  <input type="text" placeholder="Add a comment... use @name to mention" value={newComment} onChange={handleCommentChange} onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }} style={{ width: '100%', background: theme.input, border: `0.5px solid ${theme.inputBorder}`, borderRadius: '8px', padding: '8px 40px 8px 12px', fontSize: '12px', color: theme.text, outline: 'none', fontFamily: 'Inter, sans-serif' }} />
                   <button onClick={handleAddComment} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: '#E8572A', border: 'none', borderRadius: '5px', width: '24px', height: '24px', color: '#fff', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</button>
                 </div>
               </div>
@@ -498,6 +507,7 @@ export default function Board() {
           </div>
         </div>
       )}
+      <style>{`@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }`}</style>
     </div>
   );
 }

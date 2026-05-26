@@ -17,6 +17,7 @@ export default function Wiki() {
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showLinkHelper, setShowLinkHelper] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -58,7 +59,11 @@ export default function Wiki() {
       const res = await fetch('http://localhost:5000/api/wiki', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ project_id: parseInt(projectId), title: newTitle, content: `# ${newTitle}\n\nStart writing here...` }),
+        body: JSON.stringify({
+          project_id: parseInt(projectId),
+          title: newTitle,
+          content: `# ${newTitle}\n\nStart writing here...\n\nTip: Use [[Page Name]] to link to another wiki page.`,
+        }),
       });
       const data = await res.json();
       toast.success('Page created');
@@ -150,6 +155,20 @@ export default function Wiki() {
     await fetchHistory(selected.id);
   };
 
+  const insertPageLink = (pageName) => {
+    const linkText = `[[${pageName}]]`;
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const newContent = editForm.content.slice(0, start) + linkText + editForm.content.slice(start);
+      setEditForm(prev => ({ ...prev, content: newContent }));
+    } else {
+      setEditForm(prev => ({ ...prev, content: prev.content + linkText }));
+    }
+    setShowLinkHelper(false);
+    toast.success(`Link to "${pageName}" inserted`);
+  };
+
   const inputStyle = {
     width: '100%',
     background: theme.input,
@@ -174,6 +193,48 @@ export default function Wiki() {
           </div>
         );
       }
+
+      if (line.includes('[[') && line.includes(']]')) {
+        const parts = line.split(/(\[\[.*?\]\])/g);
+        return (
+          <p key={i} style={{ fontSize: '14px', color: theme.textSecondary, lineHeight: 1.7, marginBottom: '6px' }}>
+            {parts.map((part, j) => {
+              const linkMatch = part.match(/^\[\[(.*?)\]\]$/);
+              if (linkMatch) {
+                const pageName = linkMatch[1];
+                const linkedPage = pages.find(p => p.title.toLowerCase() === pageName.toLowerCase());
+                return (
+                  <span
+                    key={j}
+                    onClick={() => {
+                      if (linkedPage) {
+                        setSelected(linkedPage);
+                        setEditing(false);
+                        setShowHistory(false);
+                      } else {
+                        toast.error(`Page "${pageName}" not found`);
+                      }
+                    }}
+                    style={{
+                      color: linkedPage ? '#6C5CE7' : '#E8572A',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      textDecorationStyle: linkedPage ? 'solid' : 'dashed',
+                      padding: '0 2px',
+                    }}
+                    title={linkedPage ? `Go to: ${pageName}` : `Page not found: ${pageName}`}
+                  >
+                    📄 {pageName}
+                  </span>
+                );
+              }
+              return part;
+            })}
+          </p>
+        );
+      }
+
       if (line.startsWith('# ')) return <h1 key={i} style={{ fontFamily: 'Fraunces, serif', fontSize: '24px', fontWeight: 700, color: theme.text, marginBottom: '12px', marginTop: '8px' }}>{line.slice(2)}</h1>;
       if (line.startsWith('## ')) return <h2 key={i} style={{ fontFamily: 'Fraunces, serif', fontSize: '18px', fontWeight: 700, color: theme.text, marginBottom: '8px', marginTop: '16px' }}>{line.slice(3)}</h2>;
       if (line.startsWith('### ')) return <h3 key={i} style={{ fontSize: '15px', fontWeight: 600, color: theme.text, marginBottom: '6px', marginTop: '12px' }}>{line.slice(4)}</h3>;
@@ -216,12 +277,13 @@ export default function Wiki() {
         </div>
 
         <div style={{ marginTop: '12px', padding: '10px', background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '10px' }}>
-          <div style={{ fontSize: '10px', fontWeight: 600, color: theme.textMuted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Markdown tips</div>
+          <div style={{ fontSize: '10px', fontWeight: 600, color: theme.textMuted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tips</div>
           <div style={{ fontSize: '11px', color: theme.textMuted, lineHeight: 1.8, fontFamily: 'JetBrains Mono, monospace' }}>
             # Heading 1<br />
             ## Heading 2<br />
             - Bullet point<br />
-            ![alt](url) Image
+            ![alt](url) Image<br />
+            [[Page Name]] Link
           </div>
         </div>
       </div>
@@ -229,21 +291,50 @@ export default function Wiki() {
       <div style={{ flex: 1, background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {selected ? (
           <>
-            <div style={{ padding: '12px 16px', borderBottom: `0.5px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <div style={{ padding: '12px 16px', borderBottom: `0.5px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
               {editing ? (
                 <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} style={{ ...inputStyle, fontSize: '15px', fontWeight: 600, padding: '6px 10px', flex: 1 }} />
               ) : (
                 <div style={{ fontFamily: 'Fraunces, serif', fontSize: '18px', fontWeight: 700, color: theme.text, flex: 1 }}>{selected.title}</div>
               )}
-              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
                 {editing ? (
                   <>
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
-                    <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ background: 'rgba(108,92,231,0.15)', border: '0.5px solid rgba(108,92,231,0.3)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, color: '#6C5CE7', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={() => setShowLinkHelper(!showLinkHelper)}
+                        style={{ background: 'rgba(240,165,0,0.1)', border: '0.5px solid rgba(240,165,0,0.3)', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: 600, color: '#F0A500', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        🔗 Link page
+                      </button>
+                      {showLinkHelper && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: theme.sidebar, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: theme.textMuted, marginBottom: '6px', padding: '0 4px' }}>Link to page</div>
+                          {pages.filter(p => p.id !== selected.id).length === 0 ? (
+                            <div style={{ fontSize: '12px', color: theme.textMuted, padding: '6px 4px' }}>No other pages yet</div>
+                          ) : (
+                            pages.filter(p => p.id !== selected.id).map(p => (
+                              <div
+                                key={p.id}
+                                onClick={() => insertPageLink(p.title)}
+                                style={{ padding: '7px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(108,92,231,0.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <span style={{ fontSize: '12px' }}>📄</span>
+                                {p.title}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ background: 'rgba(108,92,231,0.15)', border: '0.5px solid rgba(108,92,231,0.3)', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: 600, color: '#6C5CE7', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {uploading ? '⏳' : '🖼 Image'}
                     </button>
                     <button onClick={handleSave} style={{ background: '#0D9E8A', border: 'none', borderRadius: '8px', padding: '6px 14px', fontFamily: 'Playfair Display, serif', fontStyle: 'italic', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>Save</button>
-                    <button onClick={() => setEditing(false)} style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: theme.textSecondary, cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={() => { setEditing(false); setShowLinkHelper(false); }} style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: theme.textSecondary, cursor: 'pointer' }}>Cancel</button>
                   </>
                 ) : showHistory ? (
                   <button onClick={() => setShowHistory(false)} style={{ background: 'transparent', border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: theme.textSecondary, cursor: 'pointer' }}>← Back</button>
@@ -280,14 +371,11 @@ export default function Wiki() {
                                 {i === 0 && <span style={{ marginLeft: '8px', background: 'rgba(13,158,138,0.15)', color: '#0D9E8A', padding: '1px 6px', borderRadius: '4px', fontSize: '10px' }}>Latest saved</span>}
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleRestoreVersion(version)}
-                              style={{ background: 'rgba(232,87,42,0.1)', border: '0.5px solid rgba(232,87,42,0.3)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 600, color: '#E8572A', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                            >
+                            <button onClick={() => handleRestoreVersion(version)} style={{ background: 'rgba(232,87,42,0.1)', border: '0.5px solid rgba(232,87,42,0.3)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 600, color: '#E8572A', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                               Restore
                             </button>
                           </div>
-                          <div style={{ fontSize: '12px', color: theme.textMuted, lineHeight: 1.5, maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: '12px', color: theme.textMuted, lineHeight: 1.5, maxHeight: '60px', overflow: 'hidden' }}>
                             {version.content?.slice(0, 200)}...
                           </div>
                         </div>
@@ -301,7 +389,7 @@ export default function Wiki() {
                   value={editForm.content}
                   onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
                   style={{ ...inputStyle, height: '100%', resize: 'none', fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', lineHeight: 1.7, minHeight: '400px' }}
-                  placeholder="Write in markdown..."
+                  placeholder="Write in markdown...&#10;# Heading&#10;## Subheading&#10;- Bullet point&#10;[[Page Name]] to link to another page"
                 />
               ) : (
                 <div>{renderContent(selected.content)}</div>
@@ -318,7 +406,9 @@ export default function Wiki() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
               <div style={{ fontFamily: 'Fraunces, serif', fontSize: '20px', fontWeight: 700, color: theme.text, marginBottom: '8px' }}>Your project wiki</div>
-              <div style={{ fontSize: '13px', color: theme.textMuted, marginBottom: '20px', lineHeight: 1.7, maxWidth: '320px' }}>Document your architecture, API references, and decisions. Supports markdown, image uploads, and version history.</div>
+              <div style={{ fontSize: '13px', color: theme.textMuted, marginBottom: '20px', lineHeight: 1.7, maxWidth: '320px' }}>
+                Document your architecture and decisions. Supports markdown, image uploads, version history, and page linking with [[Page Name]].
+              </div>
               <button onClick={() => setShowNew(true)} style={{ background: '#E8572A', border: 'none', borderRadius: '8px', padding: '10px 20px', fontFamily: 'Playfair Display, serif', fontStyle: 'italic', fontSize: '13px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>Create first page</button>
             </div>
           </div>

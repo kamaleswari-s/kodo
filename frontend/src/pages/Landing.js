@@ -119,9 +119,9 @@ export default function Landing() {
           <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '18px', fontWeight: 600, color: '#F5F0E8' }}>Kōdo</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <span className="nav-link" onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}>Features</span>
-          <span className="nav-link" onClick={() => document.getElementById('how').scrollIntoView({ behavior: 'smooth' })}>How it works</span>
           <span className="nav-link" onClick={() => document.getElementById('about').scrollIntoView({ behavior: 'smooth' })}>About</span>
+          <span className="nav-link" onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}>Features</span>
+          <span className="nav-link" onClick={() => document.getElementById('how').scrollIntoView({ behavior: 'smooth' })}>How It Works</span>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn-ghost" style={{ padding: '8px 20px', fontSize: '13px' }} onClick={() => navigate('/login')}>Sign in</button>
