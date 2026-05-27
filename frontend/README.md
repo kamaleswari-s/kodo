@@ -1,70 +1,155 @@
-# Getting Started with Create React App
+# Kōdo — Real-Time Collaborative Workspace for Developer Teams
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> The developer's way.
 
-## Available Scripts
+**Live Demo:** https://kodo-devcollab.vercel.app
 
-In the project directory, you can run:
+**GitHub:** https://github.com/kamaleswari-s/kodo
 
-### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## What is Kōdo?
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Kōdo is a GitHub-meets-Notion-meets-Slack platform built for student developer teams. Manage projects, track tasks, write documentation, review code, and get AI assistance — all in one place, in real time.
 
-### `npm test`
+Built for DevFusion Hackathon 2.0 — Problem Statement 6: DevCollab.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Workspace and Projects
+- Create or join a workspace with a unique invite code
+- Multiple projects per workspace
+- Role system — Owner, Admin, Member, Viewer
+- Invite teammates via link or WhatsApp share
 
-### `npm run build`
+### Task Management
+- Kanban board with drag and drop — To Do, In Progress, In Review, Done
+- List view — sortable table with inline status changes
+- Calendar view — tasks on a date grid, click any date to add a task
+- Task comments with @mentions — mentioned user gets a real-time notification
+- File attachments per task
+- Priority levels — Critical, Important, Low
+- Assignee, due date, and labels per task
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Real-Time Collaboration
+- Live board updates via Socket.IO — no refresh needed
+- Presence indicators — see who is online right now
+- Live typing indicators — see when a teammate is typing a comment
+- Real-time notifications for mentions and task assignments
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Code Snippet Manager
+- Save reusable code with full syntax highlighting
+- Supports JavaScript, Python, Java, C++, Go, TypeScript, SQL, Bash
+- Search by title, tag, or language
+- Copy to clipboard with one click
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Documentation Wiki
+- Markdown-based wiki pages per project
+- Image uploads
+- Page linking with [[Page Name]] syntax
+- Version history — restore any previous version
 
-### `npm run eject`
+### Aura AI Assistant
+- Powered by Mistral 7B via Featherless AI
+- Daily standup report generator
+- Project blocker identifier
+- Project progress summariser
+- Feature breakdown — describe a feature, get subtasks automatically
+- AI code reviewer — quality score out of 10, bugs, performance, security
+- GitHub PR review guidance
+- Real-time chat with your AI dev mentor
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Activity Feed
+- Real-time feed of all workspace actions
+- Filter by project or by member
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### User System
+- Profile with bio, skills, GitHub link, and profile picture
+- Notification centre with unread badge count
+- Three themes — Warm Parchment, Midnight Navy, Carbon Ink
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Novelties
+- Live typing indicators in task comments
+- Team velocity chart — tasks completed per day over 7 days
+- Focus mode — distraction-free full screen with one click
+- WhatsApp invite sharing
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Payments
+- Free plan — 1 workspace, 3 projects, 5 members
+- Pro plan — unlimited everything, sandbox checkout
 
-## Learn More
+## Tech Stack
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+| Layer | Technology |
+|---|---|
+| Frontend | React.js, React Router, Socket.IO client |
+| Backend | Node.js, Express.js, Socket.IO |
+| Database | PostgreSQL |
+| AI | Mistral 7B via Featherless AI |
+| Auth | JWT + bcryptjs |
+| File uploads | Multer |
+| Real-time | Socket.IO WebSockets |
+| Deployment | Vercel (frontend) + Railway (backend) |
 
-To learn React, check out the [React documentation](https://reactjs.org/).
 
-### Code Splitting
+## Database Schema
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- users
+- workspaces
+- workspace_members
+- projects
+- tasks
+- task_comments
+- task_attachments
+- snippets
+- wiki_pages
+- wiki_history
+- activity_log
+- notifications
 
-### Analyzing the Bundle Size
+## Local Setup
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Prerequisites
+- Node.js v18+
+- PostgreSQL 14+
 
-### Making a Progressive Web App
+### Backend
+```bash
+cd backend
+npm install
+node setup.js
+node addNotifications.js
+node addAttachments.js
+node addWikiHistory.js
+node index.js
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Frontend
+```bash
+cd frontend
+npm install
+npm start
+```
 
-### Advanced Configuration
+### Environment Variables
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=kodo_db
+DB_USER=postgres
+DB_PASSWORD=your_password
+JWT_SECRET=your_secret
+PORT=5000
+FEATHERLESS_API_KEY=your_key
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Default Login
+- Email: admin@kodo.dev
+- Password: password
 
-### Deployment
+## Open Source Libraries
+- express, socket.io, pg, bcryptjs, jsonwebtoken, multer, cors, dotenv
+- react, react-router-dom, axios, socket.io-client, react-hot-toast
+- react-syntax-highlighter
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Project Write-up
 
-### `npm run build` fails to minify
+Kōdo is a real-time collaborative workspace built for student developer teams competing in hackathons and working on college projects. Instead of juggling between Trello, Notion, GitHub, and ChatGPT, Kōdo brings everything into one platform — a live Kanban board, code snippet library, documentation wiki with page linking and version history, and an AI assistant called Aura powered by Mistral 7B. Aura generates standups, reviews code with a quality score out of 10, identifies blockers, and breaks down features into subtasks. Built with React, Node.js, PostgreSQL, and Socket.IO, every change appears instantly for all teammates. Novelties include live typing indicators, a team velocity chart, focus mode, and WhatsApp invite sharing. Kōdo is the workspace developer teams never want to close.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Team
+- Code Queens — Full stack development, UI/UX design, AI integration
