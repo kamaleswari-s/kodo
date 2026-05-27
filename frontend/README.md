@@ -6,6 +6,7 @@
 
 **GitHub:** https://github.com/kamaleswari-s/kodo
 
+
 ## What is Kōdo?
 
 Kōdo is a GitHub-meets-Notion-meets-Slack platform built for student developer teams. Manage projects, track tasks, write documentation, review code, and get AI assistance — all in one place, in real time.
@@ -61,12 +62,12 @@ Built for DevFusion Hackathon 2.0 — Problem Statement 6: DevCollab.
 ### User System
 - Profile with bio, skills, GitHub link, avatar
 - Notification centre
-- Three themes
+- Three themes — Warm Parchment, Midnight Navy, Carbon Ink
 
 ### Novelties
-- Live typing indicators
-- Team velocity chart
-- Focus mode
+- Live typing indicators in task comments
+- Team velocity chart — tasks completed per day over 7 days
+- Focus mode — distraction-free full screen with one click
 - WhatsApp invite sharing
 
 ### Payments
@@ -128,6 +129,7 @@ FEATHERLESS_API_KEY=your_key
 ## Project Write-up
 
 Kōdo is a real-time collaborative workspace built for student developer teams. Instead of juggling between Trello, Notion, GitHub, and ChatGPT, Kōdo brings everything into one platform — a live Kanban board, code snippet library, documentation wiki with page linking and version history, and an AI assistant called Aura powered by Mistral 7B. Aura generates standups, reviews code with a quality score out of 10, identifies blockers, and breaks down features into subtasks. Built with React, Node.js, PostgreSQL, and Socket.IO. Novelties include live typing indicators, team velocity chart, focus mode, and WhatsApp invite sharing.
+
 
 ## Team
 
