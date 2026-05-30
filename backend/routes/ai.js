@@ -4,9 +4,6 @@ const auth = require('../middleware/auth');
 const pool = require('../db');
 require('dotenv').config();
 
-console.log('AI routes loaded');
-console.log('GROQ_API_KEY exists:', !!process.env.GROQ_API_KEY);
-
 const callAI = async (messages) => {
   console.log('Calling Groq API with', messages.length, 'messages');
   
@@ -17,7 +14,7 @@ const callAI = async (messages) => {
       'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.1-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages,
       max_tokens: 1000,
       temperature: 0.75,
