@@ -246,7 +246,7 @@ export default function AIAssistant() {
             <div style={{ fontSize: '10px', color: '#0D9E8A', fontFamily: 'JetBrains Mono, monospace' }}>● Your Kōdo AI mentor — always online</div>
           </div>
           <div style={{ marginLeft: 'auto', fontSize: '11px', color: theme.textMuted }}>
-            Powered by Mistral 7B
+            Powered by Groq Llama 3.1
           </div>
         </div>
 
