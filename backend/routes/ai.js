@@ -6,11 +6,9 @@ require('dotenv').config();
 
 console.log('AI routes loaded');
 console.log('GROQ_API_KEY exists:', !!process.env.GROQ_API_KEY);
-console.log('GROQ_API_KEY length:', process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.length : 0);
 
 const callAI = async (messages) => {
   console.log('Calling Groq API with', messages.length, 'messages');
-  console.log('Using API Key:', process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.substring(0, 10) + '...' : 'NOT SET');
   
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -27,7 +25,6 @@ const callAI = async (messages) => {
   });
   const data = await response.json();
   console.log('Groq response status:', response.status);
-  console.log('Groq data:', JSON.stringify(data).slice(0, 500));
   if (!data.choices || !data.choices[0]) {
     throw new Error('No choices in response: ' + JSON.stringify(data));
   }
@@ -36,7 +33,6 @@ const callAI = async (messages) => {
 
 router.post('/chat', auth, async (req, res) => {
   const { message, history } = req.body;
-  console.log('Chat request received:', message);
   try {
     const systemMessage = {
       role: 'system',
@@ -49,7 +45,6 @@ router.post('/chat', auth, async (req, res) => {
       { role: 'user', content: message }
     ];
     const reply = await callAI(messages);
-    console.log('Reply generated successfully');
     res.json({ reply });
   } catch (err) {
     console.error('Chat error:', err.message);
@@ -59,7 +54,6 @@ router.post('/chat', auth, async (req, res) => {
 
 router.post('/standup', auth, async (req, res) => {
   const { project_id } = req.body;
-  console.log('Standup request for project:', project_id);
   try {
     const tasks = await pool.query(
       `SELECT t.title, t.status, t.priority, u.name as assignee
@@ -82,7 +76,6 @@ router.post('/standup', auth, async (req, res) => {
 
 router.post('/summarize', auth, async (req, res) => {
   const { project_id } = req.body;
-  console.log('Summarize request for project:', project_id);
   try {
     const tasks = await pool.query(
       `SELECT title, status, priority FROM tasks WHERE project_id = $1`,
@@ -100,7 +93,6 @@ router.post('/summarize', auth, async (req, res) => {
 
 router.post('/blockers', auth, async (req, res) => {
   const { project_id } = req.body;
-  console.log('Blockers request for project:', project_id);
   try {
     const tasks = await pool.query(
       `SELECT title, status, updated_at FROM tasks
@@ -122,7 +114,6 @@ router.post('/blockers', auth, async (req, res) => {
 
 router.post('/breakdown', auth, async (req, res) => {
   const { feature } = req.body;
-  console.log('Breakdown request for feature:', feature);
   try {
     const prompt = `Break down this feature into specific development tasks: "${feature}"\n\nReturn ONLY a JSON array of task objects with fields: title (string), priority (Critical/Important/Low), status (always "todo"). Return only valid JSON, no markdown, no explanation.`;
     const text = await callAI([{ role: 'user', content: prompt }]);
@@ -137,7 +128,6 @@ router.post('/breakdown', auth, async (req, res) => {
 
 router.post('/review-code', auth, async (req, res) => {
   const { code, language } = req.body;
-  console.log('Code review request for', language);
   try {
     const prompt = `Review this ${language} code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nReturn ONLY a JSON object with: score (1-10), verdict (string), bugs (array of strings), performance (array of strings), security (array of strings), good_practices (array of strings). Return only valid JSON, no markdown.`;
     const text = await callAI([{ role: 'user', content: prompt }]);
@@ -152,7 +142,6 @@ router.post('/review-code', auth, async (req, res) => {
 
 router.post('/review-pr', auth, async (req, res) => {
   const { pr_url } = req.body;
-  console.log('PR review request for:', pr_url);
   try {
     const prompt = `A developer has submitted this GitHub Pull Request URL for review: ${pr_url}\n\nProvide a comprehensive code review guide covering: security vulnerabilities to check, performance bottlenecks, code quality standards, and best practices. Be specific and actionable.`;
     const reply = await callAI([{ role: 'user', content: prompt }]);
